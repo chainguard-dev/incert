@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -50,7 +49,7 @@ func main() {
 	}
 
 	// Read the contents of the local CA certificates file
-	caCertBytes, err := ioutil.ReadFile(caCertFile)
+	caCertBytes, err := os.ReadFile(caCertFile)
 	if err != nil {
 		log.Fatalf("Failed to read CA certificates file %s: %s\n", caCertFile, err)
 	}
@@ -61,16 +60,11 @@ func main() {
 		log.Fatalf("Failed to find any certificates in %s", caCertFile)
 	}
 
-	// Fetch the remote image and its manifest
-	ref, err := name.ParseReference(imageURL)
-	if err != nil {
-		log.Fatalf("Failed to parse image URL %s: %s\n", imageURL, err)
-	}
-
 	img, err := fetchImage(imageURL)
 	if err != nil {
 		log.Fatalf("Failed to fetch image %s: %s\n", imageURL, err)
 	}
+
 	newImg, err := newImage(img, caCertBytes)
 	if err != nil {
 		log.Fatalf("Failed to create new image: %s\n", err)
@@ -82,7 +76,10 @@ func main() {
 		}
 	}
 
-	newRef := ref.Context().Tag("withcerts")
+	newRef, err := name.ParseReference(destImageURL)
+	if err != nil {
+		log.Fatalf("Failed to parse destination image URL %s: %s\n", destImageURL, err)
+	}
 
 	// Push the modified image back to the registry
 	err = remote.Write(newRef, newImg, remote.WithAuthFromKeychain(authn.DefaultKeychain))
@@ -123,10 +120,10 @@ func extractCACerts(img v1.Image) ([]byte, error) {
 			break
 		}
 		if hdr.Name == imageCertPath || hdr.Name == strings.TrimPrefix(imageCertPath, "/") {
-			return ioutil.ReadAll(tr)
+			return io.ReadAll(tr)
 		}
 	}
-	return nil, fmt.Errorf("Failed to find %s in remote image", imageCertPath)
+	return nil, fmt.Errorf("failed to find %s in remote image", imageCertPath)
 }
 
 func newImage(old v1.Image, caCertBytes []byte) (v1.Image, error) {
@@ -151,7 +148,7 @@ func newImage(old v1.Image, caCertBytes []byte) (v1.Image, error) {
 
 	newImg, err := mutate.Append(old, mutate.Addendum{Layer: stream.NewLayer(io.NopCloser(&buf))})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to append modified CA certificates to image: %s\n", err)
+		return nil, fmt.Errorf("failed to append modified CA certificates to image: %s", err)
 	}
 	return newImg, nil
 }
