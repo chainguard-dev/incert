@@ -3,12 +3,14 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -19,19 +21,24 @@ import (
 )
 
 var (
-	imageURL     string
-	caCertFile   string
-	destImageURL string
+	imageURL      string
+	caCertFile    string
+	destImageURL  string
+	imageCertPath string
+	outputCerts   string
 )
 
 func init() {
 	flag.StringVar(&imageURL, "image-url", "", "The URL of the image to append the CA certificates to")
 	flag.StringVar(&caCertFile, "ca-certs-file", "", "The path to the local CA certificates file")
 	flag.StringVar(&destImageURL, "dest-image-url", "", "The URL of the image to push the modified image to")
+
+	flag.StringVar(&imageCertPath, "image-cert-path", "/etc/ssl/certs/ca-certificates.crt", "The path to the certificate file in the image (optional)")
+	flag.StringVar(&outputCerts, "output-certs-path", "", "Output the (appended) certificates file from the image to a local file (optional)")
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "Usage: certko --image-url <image-url> --ca-certificates-file <ca-certificates-file> --dest-image-url <dest-image-url>")
+	flag.Usage()
 	os.Exit(1)
 }
 
@@ -48,6 +55,12 @@ func main() {
 		log.Fatalf("Failed to read CA certificates file %s: %s\n", caCertFile, err)
 	}
 
+	// Sanity check to make sure the caCertBytes are actually a list of pem-encoded certificates
+	block, _ := pem.Decode(caCertBytes)
+	if block == nil || block.Type != "CERTIFICATE" {
+		log.Fatalf("Failed to find any certificates in %s", caCertFile)
+	}
+
 	// Fetch the remote image and its manifest
 	ref, err := name.ParseReference(imageURL)
 	if err != nil {
@@ -61,6 +74,12 @@ func main() {
 	newImg, err := newImage(img, caCertBytes)
 	if err != nil {
 		log.Fatalf("Failed to create new image: %s\n", err)
+	}
+
+	if outputCerts != "" {
+		if err := os.WriteFile(outputCerts, caCertBytes, 0644); err != nil {
+			log.Fatalf("Failed to write certificates to file %s: %s.\n", outputCerts, err)
+		}
 	}
 
 	newRef := ref.Context().Tag("withcerts")
@@ -103,11 +122,11 @@ func extractCACerts(img v1.Image) ([]byte, error) {
 		if err == io.EOF {
 			break
 		}
-		if hdr.Name == "/etc/ssl/certs/ca-certificates.crt" || hdr.Name == "etc/ssl/certs/ca-certificates.crt" {
+		if hdr.Name == imageCertPath || hdr.Name == strings.TrimPrefix(imageCertPath, "/") {
 			return ioutil.ReadAll(tr)
 		}
 	}
-	return nil, fmt.Errorf("Failed to find /etc/ssl/certs/ca-certificates.crt in remote image")
+	return nil, fmt.Errorf("Failed to find %s in remote image", imageCertPath)
 }
 
 func newImage(old v1.Image, caCertBytes []byte) (v1.Image, error) {
@@ -121,7 +140,7 @@ func newImage(old v1.Image, caCertBytes []byte) (v1.Image, error) {
 	buf := bytes.Buffer{}
 	newTar := tar.NewWriter(&buf)
 	newTar.WriteHeader(&tar.Header{
-		Name: "/etc/ssl/certs/ca-certificates.crt",
+		Name: imageCertPath,
 		Mode: 0644,
 		Size: int64(len(newCaCertBytes)),
 	})

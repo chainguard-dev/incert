@@ -12,18 +12,23 @@ $ go install github.com/dlorenc/certko@latest
 
 ## Flags
 
-`certko` takes the following three flags:
+`certko` supports the following flags:
 
-`image-url`: The URL of the image to append the CA certificates to
-`ca-certs-file`: The path to the local CA certificates file
-`dest-image-url`: The URL of the image to push the modified image to
-
-## Authentication
-
-Certko uses standard Docker credential helpers for authentication.
-To configure your credential helper, please follow the instructions in the [Docker documentation](https://docs.docker.com/engine/reference/commandline/login/#credential-helpers).
+```shell
+  -ca-certs-file string
+        The path to the local CA certificates file
+  -dest-image-url string
+        The URL of the image to push the modified image to
+  -image-cert-path string
+        The path to the certificate file in the image (optional) (default "/etc/ssl/certs/ca-certificates.crt")
+  -image-url string
+        The URL of the image to append the CA certificates to
+  -output-certs-path string
+        Output the (appended) certificates file from the image to a local file (optional)
+```
 
 ## Example
+
 To append a corporate CA certificate to an image, use the following command:
 
 ```bash
@@ -39,6 +44,11 @@ $ certko --image-url=gcr.io/dlorenc-chainguard/wolfi-base --ca-certs-file mycert
 Successfully appended CA certificates to image gcr.io/dlorenc-chainguard/wolfi-base:withcerts
 gcr.io/dlorenc-chainguard/wolfi-base:withcerts@sha256:0cd4278e8072df5acd4956eb58ecba73024de47d9ceace3f0d39fb64e1b01ca6
 ```
+
+## Authentication
+
+Certko uses standard Docker credential helpers for authentication.
+To configure your credential helper, please follow the instructions in the [Docker documentation](https://docs.docker.com/engine/reference/commandline/login/#credential-helpers).
 
 ## Certificate Formats
 
