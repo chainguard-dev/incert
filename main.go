@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -20,16 +21,18 @@ import (
 )
 
 var (
-	imageURL      string
-	caCertFile    string
-	destImageURL  string
-	imageCertPath string
-	outputCerts   string
+	imageURL        string
+	caCertFile      string
+	caCertsImageURL string
+	destImageURL    string
+	imageCertPath   string
+	outputCerts     string
 )
 
 func init() {
 	flag.StringVar(&imageURL, "image-url", "", "The URL of the image to append the CA certificates to")
 	flag.StringVar(&caCertFile, "ca-certs-file", "", "The path to the local CA certificates file")
+	flag.StringVar(&caCertsImageURL, "ca-certs-image-url", "", "The URL of an image to extract the CA certificates from")
 	flag.StringVar(&destImageURL, "dest-image-url", "", "The URL of the image to push the modified image to")
 
 	flag.StringVar(&imageCertPath, "image-cert-path", "/etc/ssl/certs/ca-certificates.crt", "The path to the certificate file in the image (optional)")
@@ -48,11 +51,8 @@ func main() {
 		usage()
 	}
 
-	// Read the contents of the local CA certificates file
-	caCertBytes, err := os.ReadFile(caCertFile)
-	if err != nil {
-		log.Fatalf("Failed to read CA certificates file %s: %s\n", caCertFile, err)
-	}
+	// Get the cert bytes
+	caCertBytes, err := getCertBytes()
 
 	// Sanity check to make sure the caCertBytes are actually a list of pem-encoded certificates
 	block, _ := pem.Decode(caCertBytes)
@@ -106,6 +106,31 @@ func fetchImage(imageURL string) (v1.Image, error) {
 		return nil, err
 	}
 	return img, nil
+}
+
+func getCertBytes() ([]byte, error) {
+	// Read the certs either from a local file or a remote image
+	if caCertFile != "" {
+		// Read the contents of the local CA certificates file
+		caCertBytes, err := ioutil.ReadFile(caCertFile)
+		if err != nil {
+			log.Fatalf("Failed to read CA certificates file %s: %s\n", caCertFile, err)
+		}
+
+		// Sanity check to make sure the caCertBytes are actually a list of pem-encoded certificates
+		block, _ := pem.Decode(caCertBytes)
+		if block == nil || block.Type != "CERTIFICATE" {
+			log.Fatalf("Failed to find any certificates in %s", caCertFile)
+		}
+		return caCertBytes, nil
+	} else {
+		// Fetch the remote image and its manifest
+		img, err := fetchImage(caCertsImageURL)
+		if err != nil {
+			log.Fatalf("Failed to fetch image %s: %s\n", caCertsImageURL, err)
+		}
+		return extractCACerts(img)
+	}
 }
 
 // Extract the ca-certificates file from the remote image
