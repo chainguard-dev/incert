@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -27,6 +26,7 @@ var (
 	destImageURL    string
 	imageCertPath   string
 	outputCerts     string
+	replaceCerts    bool
 )
 
 func init() {
@@ -37,6 +37,7 @@ func init() {
 
 	flag.StringVar(&imageCertPath, "image-cert-path", "/etc/ssl/certs/ca-certificates.crt", "The path to the certificate file in the image (optional)")
 	flag.StringVar(&outputCerts, "output-certs-path", "", "Output the (appended) certificates file from the image to a local file (optional)")
+	flag.BoolVar(&replaceCerts, "replace-certs", false, "Replace the certificates in the certificate file instead of appending them")
 }
 
 func usage() {
@@ -47,12 +48,15 @@ func usage() {
 func main() {
 	flag.Parse()
 
-	if imageURL == "" || destImageURL == "" || caCertFile == "" {
+	if imageURL == "" || destImageURL == "" || (caCertFile == "" && caCertsImageURL == "") {
 		usage()
 	}
 
 	// Get the cert bytes
 	caCertBytes, err := getCertBytes()
+	if err != nil {
+		log.Fatalf("Failed to get certificate bytes: %s", err)
+	}
 
 	// Sanity check to make sure the caCertBytes are actually a list of pem-encoded certificates
 	block, _ := pem.Decode(caCertBytes)
@@ -112,7 +116,7 @@ func getCertBytes() ([]byte, error) {
 	// Read the certs either from a local file or a remote image
 	if caCertFile != "" {
 		// Read the contents of the local CA certificates file
-		caCertBytes, err := ioutil.ReadFile(caCertFile)
+		caCertBytes, err := os.ReadFile(caCertFile)
 		if err != nil {
 			log.Fatalf("Failed to read CA certificates file %s: %s\n", caCertFile, err)
 		}
@@ -152,11 +156,16 @@ func extractCACerts(img v1.Image) ([]byte, error) {
 }
 
 func newImage(old v1.Image, caCertBytes []byte) (v1.Image, error) {
-	imgCaCertBytes, err := extractCACerts(old)
-	if err != nil {
-		log.Fatalf("Failed to extract CA certificates from image: %s\n", err)
+	var newCaCertBytes []byte
+	if replaceCerts {
+		newCaCertBytes = caCertBytes
+	} else {
+		imgCaCertBytes, err := extractCACerts(old)
+		if err != nil {
+			log.Fatalf("Failed to extract CA certificates from image: %s\n", err)
+		}
+		newCaCertBytes = append(imgCaCertBytes, caCertBytes...)
 	}
-	newCaCertBytes := append(imgCaCertBytes, caCertBytes...)
 
 	// Create a new tar file with the modified ca-certificates file
 	buf := bytes.Buffer{}
