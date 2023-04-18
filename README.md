@@ -17,6 +17,8 @@ $ go install github.com/dlorenc/certko@latest
 ```shell
   -ca-certs-file string
         The path to the local CA certificates file
+  -ca-certs-image-url string
+        The URL of an image to extract the CA certificates from
   -dest-image-url string
         The URL of the image to push the modified image to
   -image-cert-path string
@@ -25,6 +27,8 @@ $ go install github.com/dlorenc/certko@latest
         The URL of the image to append the CA certificates to
   -output-certs-path string
         Output the (appended) certificates file from the image to a local file (optional)
+  -replace-certs
+        Replace the certificates in the certificate file instead of appending them
 ```
 
 ## Example
