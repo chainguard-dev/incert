@@ -2,6 +2,8 @@
 
 `incert` is a Go program that appends CA certificates to Docker images and pushes the modified image to a specified registry.
 
+(this used to be named `certko`)
+
 ## Installation
 
 To install `incert`, use the following command:
