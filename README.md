@@ -1,18 +1,18 @@
-# Certko
+# incert
 
-`certko` is a Go program that appends CA certificates to Docker images and pushes the modified image to a specified registry.
+`incert` is a Go program that appends CA certificates to Docker images and pushes the modified image to a specified registry.
 
 ## Installation
 
-To install `certko`, use the following command:
+To install `incert`, use the following command:
 
 ```bash
-$ go install github.com/dlorenc/certko@latest
+$ go install github.com/dlorenc/incert@latest
 ```
 
 ## Flags
 
-`certko` supports the following flags:
+`incert` supports the following flags:
 
 ```shell
   -ca-certs-file string
@@ -36,22 +36,22 @@ $ go install github.com/dlorenc/certko@latest
 To append a corporate CA certificate to an image, use the following command:
 
 ```bash
-$ certko -image-url=mycompany/myimage:latest -ca-certs-file=/path/to/cacerts.pem -dest-image-url=myregistry/myimage:latest
+$ incert -image-url=mycompany/myimage:latest -ca-certs-file=/path/to/cacerts.pem -dest-image-url=myregistry/myimage:latest
 ```
 
 This will append the certificates in `/path/to/cacerts.pem` to the `mycompany/myimage:latest` image and push the modified image to `myregistry/myimage:latest`.
 
-For security, `certko` outputs the pushed image reference (with digest) to stdout:
+For security, `incert` outputs the pushed image reference (with digest) to stdout:
 
 ```bash
-$ certko --image-url=gcr.io/dlorenc-chainguard/wolfi-base --ca-certs-file mycert.pem --dest-image-url gcr.io/dlorenc-chainguard/wolfi-base:new
+$ incert --image-url=gcr.io/dlorenc-chainguard/wolfi-base --ca-certs-file mycert.pem --dest-image-url gcr.io/dlorenc-chainguard/wolfi-base:new
 Successfully appended CA certificates to image gcr.io/dlorenc-chainguard/wolfi-base:withcerts
 gcr.io/dlorenc-chainguard/wolfi-base:withcerts@sha256:0cd4278e8072df5acd4956eb58ecba73024de47d9ceace3f0d39fb64e1b01ca6
 ```
 
 ## Authentication
 
-Certko uses standard Docker credential helpers for authentication.
+incert uses standard Docker credential helpers for authentication.
 To configure your credential helper, please follow the instructions in the [Docker documentation](https://docs.docker.com/engine/reference/commandline/login/#credential-helpers).
 
 ## Certificate Formats

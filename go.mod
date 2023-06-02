@@ -1,4 +1,4 @@
-module github.com/dlorenc/certko
+module github.com/dlorenc/incert
 
 go 1.20
 
