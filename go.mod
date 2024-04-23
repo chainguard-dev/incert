@@ -1,4 +1,4 @@
-module github.com/dlorenc/incert
+module github.com/chainguard-dev/incert
 
 go 1.20
 

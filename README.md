@@ -9,7 +9,7 @@
 To install `incert`, use the following command:
 
 ```bash
-$ go install github.com/dlorenc/incert@latest
+$ go install github.com/chainguard-dev/incert@latest
 ```
 
 ## Flags
