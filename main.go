@@ -35,7 +35,7 @@ func init() {
 	flag.StringVar(&caCertFile, "ca-certs-file", "", "The path to the local CA certificates file")
 	flag.StringVar(&caCertsImageURL, "ca-certs-image-url", "", "The URL of an image to extract the CA certificates from")
 	flag.StringVar(&destImageURL, "dest-image-url", "", "The URL of the image to push the modified image to")
-	flag.StringVar(&platformStr, "platform", "linux/amd64", "The platform to build for (default linux/amd64)")
+	flag.StringVar(&platformStr, "platform", "linux/amd64", "The platform to build the image for")
 
 	flag.StringVar(&imageCertPath, "image-cert-path", "/etc/ssl/certs/ca-certificates.crt", "The path to the certificate file in the image (optional)")
 	flag.StringVar(&outputCerts, "output-certs-path", "", "Output the (appended) certificates file from the image to a local file (optional)")
