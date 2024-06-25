@@ -30,6 +30,11 @@ NGINX=$(docker run -p 8443:8443 -d \
 docker run --rm -it --network host --add-host example.com:127.0.0.1 cgr.dev/chainguard/curl:latest-dev -k https://example.com:8443
 
 # now create container with cert and try
-IMAGE=ttl.sh/incert/test$RANDOM:20m
-incert --ca-certs-file selfsigned.pem --image-url cgr.dev/chainguard/curl:latest --dest-image-url $IMAGE
+IMAGE=ttl.sh/incert/test-default-$RANDOM:20m
+../incert --ca-certs-file selfsigned.pem --image-url cgr.dev/chainguard/curl:latest --dest-image-url $IMAGE
+docker run --rm -it --network host --add-host example.com:127.0.0.1 $IMAGE https://example.com:8443
+
+# test using platform argument
+IMAGE=ttl.sh/incert/test-arm64-default-$RANDOM:20m
+../incert --ca-certs-file selfsigned.pem --image-url cgr.dev/chainguard/curl:latest --platform linux/arm64 --dest-image-url $IMAGE
 docker run --rm -it --network host --add-host example.com:127.0.0.1 $IMAGE https://example.com:8443
