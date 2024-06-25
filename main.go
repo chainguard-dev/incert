@@ -24,6 +24,7 @@ var (
 	caCertFile      string
 	caCertsImageURL string
 	destImageURL    string
+	platformStr     string
 	imageCertPath   string
 	outputCerts     string
 	replaceCerts    bool
@@ -34,6 +35,7 @@ func init() {
 	flag.StringVar(&caCertFile, "ca-certs-file", "", "The path to the local CA certificates file")
 	flag.StringVar(&caCertsImageURL, "ca-certs-image-url", "", "The URL of an image to extract the CA certificates from")
 	flag.StringVar(&destImageURL, "dest-image-url", "", "The URL of the image to push the modified image to")
+	flag.StringVar(&platformStr, "platform", "", "The platform to build for (default linux/amd64)")
 
 	flag.StringVar(&imageCertPath, "image-cert-path", "/etc/ssl/certs/ca-certificates.crt", "The path to the certificate file in the image (optional)")
 	flag.StringVar(&outputCerts, "output-certs-path", "", "Output the (appended) certificates file from the image to a local file (optional)")
@@ -46,14 +48,24 @@ func usage() {
 }
 
 func main() {
+
+	var platform v1.Platform
 	flag.Parse()
 
 	if imageURL == "" || destImageURL == "" || (caCertFile == "" && caCertsImageURL == "") {
 		usage()
 	}
 
+	if platformStr != "" {
+		p, err := v1.ParsePlatform(platformStr)
+		if err != nil {
+			log.Fatalf("Failed to parse platform: %s", err)
+		}
+		platform = *p
+	}
+
 	// Get the cert bytes
-	caCertBytes, err := getCertBytes()
+	caCertBytes, err := getCertBytes(platform)
 	if err != nil {
 		log.Fatalf("Failed to get certificate bytes: %s", err)
 	}
@@ -64,7 +76,7 @@ func main() {
 		log.Fatalf("Failed to find any certificates in %s", caCertFile)
 	}
 
-	img, err := fetchImage(imageURL)
+	img, err := fetchImage(imageURL, platform)
 	if err != nil {
 		log.Fatalf("Failed to fetch image %s: %s\n", imageURL, err)
 	}
@@ -100,19 +112,19 @@ func main() {
 }
 
 // Fetch the remote image
-func fetchImage(imageURL string) (v1.Image, error) {
+func fetchImage(imageURL string, platform v1.Platform) (v1.Image, error) {
 	ref, err := name.ParseReference(imageURL)
 	if err != nil {
 		return nil, err
 	}
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithPlatform((platform)))
 	if err != nil {
 		return nil, err
 	}
 	return img, nil
 }
 
-func getCertBytes() ([]byte, error) {
+func getCertBytes(platform v1.Platform) ([]byte, error) {
 	// Read the certs either from a local file or a remote image
 	if caCertFile != "" {
 		// Read the contents of the local CA certificates file
@@ -129,7 +141,7 @@ func getCertBytes() ([]byte, error) {
 		return caCertBytes, nil
 	} else {
 		// Fetch the remote image and its manifest
-		img, err := fetchImage(caCertsImageURL)
+		img, err := fetchImage(caCertsImageURL, platform)
 		if err != nil {
 			log.Fatalf("Failed to fetch image %s: %s\n", caCertsImageURL, err)
 		}
