@@ -19,7 +19,7 @@ sboms:
 
 builds:
   - id: incert
-    binary: incert-{{ .OS }}-{{ .Arch }}
+    binary: incert-{{ .Os }}-{{ .Arch }}
     no_unique_dist_dir: true
     main: .
     goos:
