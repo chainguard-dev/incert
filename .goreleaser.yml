@@ -4,7 +4,6 @@ version: 2
 env:
   - CGO_ENABLED=0
   - COSIGN_YES=true
-  - TUF_ROOT=/tmp
 
 # Prevents parallel builds from stepping on eachothers toes downloading modules
 before:
