@@ -9,17 +9,14 @@ permissions:
 
 jobs:
   goreleaser:
-    permissions:
-      contents: write # To publish the release.
-
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout
-      - uses: actions/setup-go
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5
         with:
           fetch-depth: 0
 
-      - uses: goreleaser/goreleaser-action
+      - uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6
         with:
           version: latest
           args: release --clean
