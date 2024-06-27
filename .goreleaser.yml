@@ -1,0 +1,64 @@
+project_name: incert
+version: 2
+
+env:
+  - CGO_ENABLED=0
+  - COSIGN_YES=true
+
+# Prevents parallel builds from stepping on eachothers toes downloading modules
+before:
+  hooks:
+    - go mod tidy
+    - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
+
+gomod:
+  proxy: true
+
+sboms:
+  - artifacts: binary
+
+builds:
+  - id: incert
+    binary: incert-linux-{{ .Arch }}
+    no_unique_dist_dir: true
+    main: .
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+
+signs:
+  # Keyless
+  - id: keyless
+    signature: "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
+    cmd: cosign
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
+    artifacts: binary
+  - id: checksum-keyless
+    signature: "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
+    cmd: cosign
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
+    artifacts: checksum
+
+archives:
+  - format: binary
+    name_template: "{{ .Binary }}"
+    allow_different_binary_count: true
+
+checksum:
+  name_template: "{{ .ProjectName }}_checksums.txt"
+
+snapshot:
+  name_template: SNAPSHOT-{{ .ShortCommit }}
+
+release:
+  prerelease: auto
+  draft: true # allow for manual edits
