@@ -19,11 +19,12 @@ sboms:
 
 builds:
   - id: incert
-    binary: incert-linux-{{ .Arch }}
+    binary: incert-{{ .Os }}-{{ .Arch }}
     no_unique_dist_dir: true
     main: .
     goos:
       - linux
+      - darwin
     goarch:
       - amd64
       - arm64
