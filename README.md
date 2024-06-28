@@ -6,11 +6,15 @@
 
 ## Installation
 
-To install `incert`, use the following command:
+Binaries for various architectures are available from the [releases](./releases) page.
+
+If you have a Go installation, you can install `incert` with the following command:
 
 ```bash
 $ go install github.com/chainguard-dev/incert@latest
 ```
+
+Alternatively, you can also build from source by cloning the repo and running `go build`.
 
 ## Flags
 
