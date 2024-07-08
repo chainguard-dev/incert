@@ -28,6 +28,8 @@ var (
 	imageCertPath   string
 	outputCerts     string
 	replaceCerts    bool
+	ownerUserID     int
+	ownerGroupID    int
 )
 
 func init() {
@@ -38,6 +40,8 @@ func init() {
 	flag.StringVar(&platformStr, "platform", "linux/amd64", "The platform to build the image for")
 
 	flag.StringVar(&imageCertPath, "image-cert-path", "/etc/ssl/certs/ca-certificates.crt", "The path to the certificate file in the image (optional)")
+	flag.IntVar(&ownerUserID, "owner-user-id", 0, "The user ID of the owner of the certificate file in the image (optional)")
+	flag.IntVar(&ownerGroupID, "owner-group-id", 0, "The group ID of the owner of the certificate file in the image (optional)")
 	flag.StringVar(&outputCerts, "output-certs-path", "", "Output the (appended) certificates file from the image to a local file (optional)")
 	flag.BoolVar(&replaceCerts, "replace-certs", false, "Replace the certificates in the certificate file instead of appending them")
 }
@@ -186,6 +190,8 @@ func newImage(old v1.Image, caCertBytes []byte) (v1.Image, error) {
 		Name: imageCertPath,
 		Mode: 0644,
 		Size: int64(len(newCaCertBytes)),
+		Uid:  ownerUserID,
+		Gid:  ownerGroupID,
 	})
 	if _, err := newTar.Write(newCaCertBytes); err != nil {
 		return nil, err
