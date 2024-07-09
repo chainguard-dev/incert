@@ -22,21 +22,25 @@ Alternatively, you can also build from source by cloning the repo and running `g
 
 ```shell
   -ca-certs-file string
-    	The path to the local CA certificates file
+        The path to the local CA certificates file
   -ca-certs-image-url string
-    	The URL of an image to extract the CA certificates from
+        The URL of an image to extract the CA certificates from
   -dest-image-url string
-    	The URL of the image to push the modified image to
+        The URL of the image to push the modified image to
   -image-cert-path string
-    	The path to the certificate file in the image (optional) (default "/etc/ssl/certs/ca-certificates.crt")
+        The path to the certificate file in the image (optional) (default "/etc/ssl/certs/ca-certificates.crt")
   -image-url string
-    	The URL of the image to append the CA certificates to
+        The URL of the image to append the CA certificates to
   -output-certs-path string
-    	Output the (appended) certificates file from the image to a local file (optional)
+        Output the (appended) certificates file from the image to a local file (optional)
+  -owner-group-id int
+        The group ID of the owner of the certificate file in the image (optional)
+  -owner-user-id int
+        The user ID of the owner of the certificate file in the image (optional)
   -platform string
-    	The platform to build for (default linux/amd64) (default "linux/amd64")
+        The platform to build the image for (default "linux/amd64")
   -replace-certs
-    	Replace the certificates in the certificate file instead of appending them
+        Replace the certificates in the certificate file instead of appending them
 ```
 
 ## Example
