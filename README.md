@@ -6,7 +6,7 @@
 
 ## Installation
 
-Binaries for various architectures are available from the [releases](./releases) page.
+Binaries for various architectures are available from the [releases](../releases) page.
 
 If you have a Go installation, you can install `incert` with the following command:
 
