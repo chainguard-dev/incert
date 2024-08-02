@@ -180,7 +180,7 @@ func newImage(old v1.Image, caCertBytes []byte) (v1.Image, error) {
 		if err != nil {
 			log.Fatalf("Failed to extract CA certificates from image: %s\n", err)
 		}
-		newCaCertBytes = append(imgCaCertBytes, caCertBytes...)
+		newCaCertBytes = append(append(imgCaCertBytes, caCertBytes...), '\n')
 	}
 
 	// Create a new tar file with the modified ca-certificates file
