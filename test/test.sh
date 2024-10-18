@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Test script for incert
-# Assumes incert is on path and docker is available
+# Assumes incert is at "../incert" and docker is available
 
 set -e
 #set -x
@@ -17,7 +17,7 @@ trap cleanup EXIT
 
 # create self-signed cert
 #cfssl selfsign www.example.net csr.json | cfssljson -bare selfsigned
-docker run -v $PWD:/data --entrypoint /bin/sh -it -w /data cgr.dev/chainguard/cfssl:latest-dev -c "cfssl selfsign www.example.net csr.json | cfssljson -bare selfsigned"
+docker run -v $PWD:/data --entrypoint /bin/sh -it -w /data cfssl/cfssl -c "cfssl selfsign www.example.net csr.json | cfssljson -bare selfsigned"
 
 # Run nginx with private key and cert
 NGINX=$(docker run -p 8443:8443 -d \
