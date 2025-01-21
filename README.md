@@ -21,26 +21,23 @@ Alternatively, you can also build from source by cloning the repo and running `g
 `incert` supports the following flags:
 
 ```shell
-  -ca-certs-file string
-        The path to the local CA certificates file
-  -ca-certs-image-url string
-        The URL of an image to extract the CA certificates from
-  -dest-image-url string
-        The URL of the image to push the modified image to
-  -image-cert-path string
-        The path to the certificate file in the image (optional) (default "/etc/ssl/certs/ca-certificates.crt")
-  -image-url string
-        The URL of the image to append the CA certificates to
-  -output-certs-path string
-        Output the (appended) certificates file from the image to a local file (optional)
-  -owner-group-id int
-        The group ID of the owner of the certificate file in the image (optional)
-  -owner-user-id int
-        The user ID of the owner of the certificate file in the image (optional)
-  -platform string
-        The platform to build the image for (default "linux/amd64")
-  -replace-certs
-        Replace the certificates in the certificate file instead of appending them
+Appends CA certificates to Docker images and pushes the modified image to a specified registry.
+
+Usage:
+  incert [flags]
+
+Flags:
+      --ca-certs-file string        The path to the local CA certificates file
+      --ca-certs-image-url string   The URL of an image to extract the CA certificates from
+      --dest-image-url string       The URL of the image to push the modified image to
+  -h, --help                        help for incert
+      --image-cert-path string      The path to the certificate file in the image (optional) (default "/etc/ssl/certs/ca-certificates.crt")
+      --image-url string            The URL of the image to append the CA certificates to
+      --output-certs-path string    Output the (appended) certificates file from the image to a local file (optional)
+      --owner-group-id int          The group ID of the owner of the certificate file in the image (optional)
+      --owner-user-id int           The user ID of the owner of the certificate file in the image (optional)
+      --platform string             The platform to build the image for (default "linux/amd64")
+      --replace-certs               Replace the certificates in the certificate file instead of appending them
 ```
 
 ## Example
@@ -48,7 +45,7 @@ Alternatively, you can also build from source by cloning the repo and running `g
 To append a corporate CA certificate to an image, use the following command:
 
 ```bash
-$ incert -image-url=mycompany/myimage:latest -ca-certs-file=/path/to/cacerts.pem -dest-image-url=myregistry/myimage:latest
+$ incert --image-url=mycompany/myimage:latest --ca-certs-file=/path/to/cacerts.pem --dest-image-url=myregistry/myimage:latest
 ```
 
 This will append the certificates in `/path/to/cacerts.pem` to the `mycompany/myimage:latest` image and push the modified image to `myregistry/myimage:latest`.
