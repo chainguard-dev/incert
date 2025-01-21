@@ -32,3 +32,7 @@ jobs:
           args: release --clean --skip=sign --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: check binary
+        run: |
+          ./dist/incert-linux-amd64 --help
