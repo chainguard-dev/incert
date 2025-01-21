@@ -1,6 +1,9 @@
 module github.com/chainguard-dev/incert
 
-go 1.23
+go 1.23.0
+
+toolchain go1.23.5
+
 require github.com/google/go-containerregistry v0.20.3
 
 require (
