@@ -58,7 +58,7 @@ checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
 
 snapshot:
-  name_template: SNAPSHOT-{{ .ShortCommit }}
+  version_template: SNAPSHOT-{{ .ShortCommit }}
 
 release:
   prerelease: auto
