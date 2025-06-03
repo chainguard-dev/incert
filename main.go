@@ -19,9 +19,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/stream"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 var (
@@ -42,7 +44,7 @@ func init() {
 	flag.StringVar(&caCertFile, "ca-certs-file", "", "The path to the local CA certificates file")
 	flag.StringVar(&caCertsImageURL, "ca-certs-image-url", "", "The URL of an image to extract the CA certificates from")
 	flag.StringVar(&destImageURL, "dest-image-url", "", "The URL of the image to push the modified image to")
-	flag.StringVar(&platformStr, "platform", "linux/amd64", "The platform to build the image for")
+	flag.StringVar(&platformStr, "platform", "", "The platform to build the image for")
 
 	flag.StringVar(&imageCertPath, "image-cert-path", "/etc/ssl/certs/ca-certificates.crt", "The path to the certificate file in the image (optional)")
 	flag.IntVar(&ownerUserID, "owner-user-id", 0, "The user ID of the owner of the certificate file in the image (optional)")
@@ -57,8 +59,7 @@ func usage() {
 }
 
 func main() {
-
-	var platform v1.Platform
+	var platform *v1.Platform
 	flag.Parse()
 
 	if imageURL == "" || destImageURL == "" || (caCertFile == "" && caCertsImageURL == "") {
@@ -70,7 +71,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to parse platform: %s", err)
 		}
-		platform = *p
+		platform = p
 	}
 
 	// Get the cert bytes
@@ -107,7 +108,7 @@ func main() {
 	}
 
 	// Push the modified image back to the registry
-	err = remote.Write(newRef, newImg, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	err = remote.Push(newRef, newImg, remoteOpts(platform)...)
 	if err != nil {
 		log.Fatalf("Failed to push modified image %s: %s\n", newRef.String(), err)
 	}
@@ -120,20 +121,52 @@ func main() {
 	fmt.Printf("%s@sha256:%s\n", newRef.String(), h.Hex)
 }
 
+// Image may be a v1.Image or a v1.ImageIndex. It allows us to operate
+// generically across either.
+type Image interface {
+	// Digest returns the sha256 of this image's manifest.
+	Digest() (v1.Hash, error)
+
+	remote.Taggable
+}
+
+func remoteOpts(platform *v1.Platform) []remote.Option {
+	rOpts := []remote.Option{
+		remote.WithAuthFromKeychain(authn.DefaultKeychain),
+	}
+	if platform != nil {
+		rOpts = append(rOpts, remote.WithPlatform(*platform))
+	}
+
+	return rOpts
+}
+
 // Fetch the remote image
-func fetchImage(imageURL string, platform v1.Platform) (v1.Image, error) {
+func fetchImage(imageURL string, platform *v1.Platform) (Image, error) {
 	ref, err := name.ParseReference(imageURL)
 	if err != nil {
 		return nil, err
 	}
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain), remote.WithPlatform((platform)))
+	if platform != nil {
+		return remote.Image(ref, remoteOpts(platform)...)
+	}
+
+	desc, err := remote.Get(ref, remoteOpts(platform)...)
 	if err != nil {
 		return nil, err
 	}
-	return img, nil
+	switch desc.MediaType {
+	case types.OCIImageIndex, types.DockerManifestList:
+		return desc.ImageIndex()
+	case types.OCIManifestSchema1, types.DockerManifestSchema2:
+		return desc.Image()
+
+	default:
+		return nil, fmt.Errorf("unknown mime type: %v", desc.MediaType)
+	}
 }
 
-func getCertBytes(platform v1.Platform) ([]byte, error) {
+func getCertBytes(platform *v1.Platform) ([]byte, error) {
 	// Read the certs either from a local file or a remote image
 	if caCertFile != "" {
 		// Read the contents of the local CA certificates file
@@ -150,7 +183,11 @@ func getCertBytes(platform v1.Platform) ([]byte, error) {
 		return caCertBytes, nil
 	} else {
 		// Fetch the remote image and its manifest
-		img, err := fetchImage(caCertsImageURL, platform)
+		ref, err := name.ParseReference(caCertsImageURL)
+		if err != nil {
+			log.Fatalf("Failed to parse image url %s: %s\n", caCertsImageURL, err)
+		}
+		img, err := remote.Image(ref, remoteOpts(platform)...)
 		if err != nil {
 			log.Fatalf("Failed to fetch image %s: %s\n", caCertsImageURL, err)
 		}
@@ -176,7 +213,18 @@ func extractCACerts(img v1.Image) ([]byte, error) {
 	return nil, fmt.Errorf("failed to find %s in remote image", imageCertPath)
 }
 
-func newImage(old v1.Image, caCertBytes []byte) (v1.Image, error) {
+func newImage(old Image, caCertBytes []byte) (Image, error) {
+	switch img := old.(type) {
+	case v1.Image:
+		return mutateImage(img, caCertBytes)
+	case v1.ImageIndex:
+		return mutateImageIndex(img, caCertBytes)
+	default:
+		return nil, fmt.Errorf("unexpected type: %t", img)
+	}
+}
+
+func mutateImage(old v1.Image, caCertBytes []byte) (v1.Image, error) {
 	var newCaCertBytes []byte
 	if replaceCerts {
 		newCaCertBytes = caCertBytes
@@ -208,4 +256,56 @@ func newImage(old v1.Image, caCertBytes []byte) (v1.Image, error) {
 		return nil, fmt.Errorf("failed to append modified CA certificates to image: %s", err)
 	}
 	return newImg, nil
+}
+
+func mutateImageIndex(old v1.ImageIndex, caCertBytes []byte) (v1.ImageIndex, error) {
+	om, err := old.IndexManifest()
+	if err != nil {
+		return nil, fmt.Errorf("parsing manifest: %w", err)
+	}
+
+	adds := []mutate.IndexAddendum{}
+	for _, desc := range om.Manifests {
+		var add mutate.Appendable
+
+		switch desc.MediaType {
+		case types.OCIImageIndex, types.DockerManifestList:
+			idx, err := old.ImageIndex(desc.Digest)
+			if err != nil {
+				return nil, err
+			}
+			newIdx, err := mutateImageIndex(idx, caCertBytes)
+			if err != nil {
+				return nil, err
+			}
+			add = newIdx
+		case types.OCIManifestSchema1, types.DockerManifestSchema2:
+			img, err := old.Image(desc.Digest)
+			if err != nil {
+				return nil, err
+			}
+			newImage, err := mutateImage(img, caCertBytes)
+			if err != nil {
+				return nil, err
+			}
+			add = newImage
+		default:
+			return nil, fmt.Errorf("unknown mime type: %v", desc.MediaType)
+		}
+
+		adds = append(adds, mutate.IndexAddendum{
+			Add: add,
+			Descriptor: v1.Descriptor{
+				URLs:        desc.URLs,
+				MediaType:   desc.MediaType,
+				Annotations: desc.Annotations,
+				Platform:    desc.Platform,
+			},
+		})
+	}
+
+	nm := mutate.IndexMediaType(empty.Index, om.MediaType)
+	nm = mutate.Annotations(nm, om.Annotations).(v1.ImageIndex)
+
+	return mutate.AppendManifests(nm, adds...), nil
 }
