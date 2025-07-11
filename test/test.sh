@@ -41,6 +41,13 @@ IMAGE=ttl.sh/incert/test-arm64-default-$RANDOM:20m
 docker run --rm -it --network host --add-host example.com:127.0.0.1 $IMAGE https://example.com:8443
 docker manifest inspect $IMAGE | docker run --rm -i --entrypoint jq cgr.dev/chainguard/curl:latest-dev -e '.mediaType == "application/vnd.oci.image.manifest.v1+json"'
 
+# test specifying a platform that doesn't exist in the index; this should
+# produce an error
+IMAGE=ttl.sh/incert/test-386-$RANDOM:20m
+../incert --ca-certs-file selfsigned.pem --image-url cgr.dev/chainguard/curl:latest --platform linux/386 --dest-image-url $IMAGE \
+  && (echo "Unexpected exit status for missing platform: 0"; exit 1) \
+  || true
+
 # test against a specific manifest, rather than an index
 IMAGE=ttl.sh/incert/test-image-$RANDOM:20m
 CURL_DIGEST=$(docker manifest inspect cgr.dev/chainguard/curl:latest | docker run --rm -i --entrypoint jq cgr.dev/chainguard/curl:latest-dev -r '.manifests[] | select(.platform.architecture == "arm64" and .platform.os == "linux") | .digest')

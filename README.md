@@ -104,3 +104,18 @@ Ti07NEPhmg4NpGaXutIcSkwsKouLgU9xGqndXHt7CMUADTdA43x7VF8vhV929ven
 sBxXVsFy6K2ir40zSbofitzmdHxghm+Hl3s=
 -----END CERTIFICATE-----
 ```
+
+## Multi-Architecture Images
+
+When `incert` encounters a reference to an [image
+index](https://specs.opencontainers.org/image-spec/image-index/) it will insert
+certificates into each image in the index and publish a new index to the
+destination.
+
+If you provide the `-platform` flag, it will resolve the index to the manifest
+for that platform and publish an updated manifest to the destination.
+
+If you provide a platform that isn't in the index, it will return an error.
+
+The `-platform` flag will be ignored when the `-image-url` refers to a
+[manifest](https://specs.opencontainers.org/image-spec/manifest/).
