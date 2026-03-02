@@ -2,7 +2,7 @@ module github.com/chainguard-dev/incert
 
 go 1.25.6
 
-require github.com/google/go-containerregistry v0.21.0
+require github.com/google/go-containerregistry v0.21.2
 
 require (
 	github.com/containerd/stargz-snapshotter/estargz v0.18.2 // indirect
