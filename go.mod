@@ -2,7 +2,7 @@ module github.com/chainguard-dev/incert
 
 go 1.25.7
 
-require github.com/google/go-containerregistry v0.22.0
+require github.com/google/go-containerregistry v0.22.1
 
 require (
 	github.com/docker/cli v29.7.2+incompatible // indirect
